@@ -157,6 +157,22 @@ static curl_easy_cleanup_type curl_easy_cleanup_func;
 typedef CURL *(*curl_easy_duphandle_type)(CURL *curl);
 static curl_easy_duphandle_type curl_easy_duphandle_func;
 
+#ifdef GIT_CURL_HAVE_CURL_URL
+typedef CURLU *(*curl_url_type)(void);
+static curl_url_type curl_url_func;
+
+typedef void (*curl_url_cleanup_type)(CURLU *handle);
+static curl_url_cleanup_type curl_url_cleanup_func;
+
+typedef CURLUcode (*curl_url_set_type)(CURLU *handle, CURLUPart what,
+				       const char *part, unsigned int flags);
+static curl_url_set_type curl_url_set_func;
+
+typedef CURLUcode (*curl_url_get_type)(const CURLU *handle, CURLUPart what,
+				       char **part, unsigned int flags);
+static curl_url_get_type curl_url_get_func;
+#endif
+
 typedef CURLcode (*curl_easy_getinfo_long_type)(CURL *curl, CURLINFO info, long *value);
 static curl_easy_getinfo_long_type curl_easy_getinfo_long_func;
 
@@ -221,6 +237,16 @@ static void lazy_load_curl(void)
 	curl_easy_perform_func = (curl_easy_perform_type)load_function(libcurl, "curl_easy_perform");
 	curl_easy_cleanup_func = (curl_easy_cleanup_type)load_function(libcurl, "curl_easy_cleanup");
 	curl_easy_duphandle_func = (curl_easy_duphandle_type)load_function(libcurl, "curl_easy_duphandle");
+
+#ifdef GIT_CURL_HAVE_CURL_URL
+	curl_url_func = (curl_url_type)load_function(libcurl, "curl_url");
+	curl_url_cleanup_func = (curl_url_cleanup_type)
+		load_function(libcurl, "curl_url_cleanup");
+	curl_url_set_func = (curl_url_set_type)
+		load_function(libcurl, "curl_url_set");
+	curl_url_get_func = (curl_url_get_type)
+		load_function(libcurl, "curl_url_get");
+#endif
 
 	curl_easy_getinfo_func = load_function(libcurl, "curl_easy_getinfo");
 	curl_easy_getinfo_long_func = (curl_easy_getinfo_long_type)curl_easy_getinfo_func;
@@ -373,6 +399,34 @@ CURL *curl_easy_duphandle(CURL *curl)
 	lazy_load_curl();
 	return curl_easy_duphandle_func(curl);
 }
+
+#ifdef GIT_CURL_HAVE_CURL_URL
+CURLU *curl_url(void)
+{
+	lazy_load_curl();
+	return curl_url_func();
+}
+
+void curl_url_cleanup(CURLU *handle)
+{
+	lazy_load_curl();
+	curl_url_cleanup_func(handle);
+}
+
+CURLUcode curl_url_set(CURLU *handle, CURLUPart what, const char *part,
+		       unsigned int flags)
+{
+	lazy_load_curl();
+	return curl_url_set_func(handle, what, part, flags);
+}
+
+CURLUcode curl_url_get(const CURLU *handle, CURLUPart what, char **part,
+		       unsigned int flags)
+{
+	lazy_load_curl();
+	return curl_url_get_func(handle, what, part, flags);
+}
+#endif
 
 #ifndef CURL_IGNORE_DEPRECATION
 #define CURL_IGNORE_DEPRECATION(x) x
