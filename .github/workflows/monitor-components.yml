@@ -79,7 +79,31 @@ jobs:
             feed: https://github.com/jrsoftware/issrc/tags.atom
       fail-fast: false
     steps:
-      - uses: git-for-windows/rss-to-issues@v0
+      # The feed hosts occasionally time out or answer with a 5xx error. Give
+      # such a failure a second chance before failing the job. The Action only
+      # opens issues that do not exist yet, so running it again is safe.
+      - id: first-attempt
+        continue-on-error: true
+        uses: git-for-windows/rss-to-issues@v0
+        with:
+          feed: ${{matrix.component.feed}}
+          prefix: "[New ${{matrix.component.label}} version]"
+          labels: component-update
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          character-limit: ${{ env.CHARACTER_LIMIT }}
+          max-age: ${{ env.MAX_AGE }}
+          aggregate: ${{matrix.component.aggregate}}
+          title-pattern: ${{matrix.component.title-pattern}}
+      - name: Wait before retrying
+        if: steps.first-attempt.outcome == 'failure'
+        env:
+          FEED: ${{matrix.component.feed}}
+        run: |
+          echo "::warning::Could not process $FEED; retrying in two minutes"
+          sleep 120
+      - name: Retry
+        if: steps.first-attempt.outcome == 'failure'
+        uses: git-for-windows/rss-to-issues@v0
         with:
           feed: ${{matrix.component.feed}}
           prefix: "[New ${{matrix.component.label}} version]"
