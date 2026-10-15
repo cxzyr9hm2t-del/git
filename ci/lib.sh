@@ -183,9 +183,12 @@ handle_failed_tests () {
 create_failed_test_artifacts () {
 	mkdir -p "${TEST_OUTPUT_DIRECTORY:-t}"/failed-test-artifacts
 
+	found=
 	for test_exit in "${TEST_OUTPUT_DIRECTORY:-t}"/test-results/*.exit
 	do
+		test -f "$test_exit" || continue
 		test 0 != "$(cat "$test_exit")" || continue
+		found=t
 
 		test_name="${test_exit%.exit}"
 		test_name="${test_name##*/}"
@@ -198,6 +201,19 @@ create_failed_test_artifacts () {
 		cp "${TEST_OUTPUT_DIRECTORY:-t}/test-results/$test_name.out" "${TEST_OUTPUT_DIRECTORY:-t}"/failed-test-artifacts/
 		tar czf "${TEST_OUTPUT_DIRECTORY:-t}/failed-test-artifacts/$test_name.trash.tar.gz" "$trash_dir"
 	done
+
+	# prove can fail with Wstat 0 / "No plan found" when TAP is
+	# polluted. Those scripts still write .exit 0, so the loop
+	# above uploads nothing.
+	if test -z "$found"
+	then
+		for test_out in "${TEST_OUTPUT_DIRECTORY:-t}"/test-results/*.out
+		do
+			test -f "$test_out" || continue
+			dest="${TEST_OUTPUT_DIRECTORY:-t}/failed-test-artifacts"
+			cp "$test_out" "$dest/"
+		done
+	fi
 }
 
 # GitHub Action doesn't set TERM, which is required by tput

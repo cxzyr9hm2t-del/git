@@ -5,6 +5,12 @@ test_description='git cat-file --batch-command with remote-object-info command'
 . ./test-lib.sh
 . "$TEST_DIRECTORY"/lib-cat-file.sh
 
+# Source before any git command so a skip-all TAP plan is emitted before
+# prove can see stray source-time git stderr (merged into TAP by --verbose-log).
+. "$TEST_DIRECTORY"/lib-git-daemon.sh
+
+# Keep source-time git chatter on the verbose-log fd, not TAP stdout.
+{
 hello_content="Hello World"
 hello_size=$(strlen "$hello_content")
 hello_type="blob"
@@ -48,6 +54,7 @@ $tag_description"
 tag_oid=$(echo_without_newline "$tag_content" | git hash-object -t tag --stdin -w)
 tag_size=$(strlen "$tag_content")
 tag_type="tag"
+} 2>&4
 
 set_transport_variables () {
 	hello_oid=$(echo_without_newline "$hello_content" | git hash-object --stdin)
@@ -63,7 +70,6 @@ set_transport_variables () {
 
 # Test --batch-command remote-object-info with 'git://' transport with
 # transfer.advertiseobjectinfo set to true, i.e. server has object-info capability
-. "$TEST_DIRECTORY"/lib-git-daemon.sh
 start_git_daemon --export-all
 daemon_parent=$GIT_DAEMON_DOCUMENT_ROOT_PATH/parent
 

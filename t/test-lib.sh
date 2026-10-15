@@ -488,8 +488,19 @@ then
 	# from any previous runs.
 	>"$GIT_TEST_TEE_OUTPUT_FILE"
 
+	# Under prove this pipe is TAP stdout. Merging stderr (2>&1)
+	# lets source-time git chatter land after "pragma +strict"
+	# and makes prove report "No plan found" with exit status 0.
 	(
-		ret=0 && GIT_TEST_TEE_STARTED=done ${TEST_SHELL_PATH} "$0" "$@" 2>&1 || ret=$?
+		ret=0
+		if test -n "$HARNESS_ACTIVE"
+		then
+			GIT_TEST_TEE_STARTED=done \
+				${TEST_SHELL_PATH} "$0" "$@" || ret=$?
+		else
+			GIT_TEST_TEE_STARTED=done \
+				${TEST_SHELL_PATH} "$0" "$@" 2>&1 || ret=$?
+		fi
 		echo "$ret" >"$TEST_RESULTS_BASE.exit"
 	) | tee -a "$GIT_TEST_TEE_OUTPUT_FILE"
 	test "$(cat "$TEST_RESULTS_BASE.exit")" = 0
