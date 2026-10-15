@@ -1,6 +1,11 @@
 # Shell library to run git-daemon in tests.  Ends the test early if
 # GIT_TEST_GIT_DAEMON is not set.
 #
+# Source this immediately after test-lib.sh, before any git command.
+# Under --verbose-log the tee wrapper merges source-time git stderr into
+# the TAP stream. A stray line after "pragma +strict" makes prove report
+# "No plan found" with exit status 0.
+#
 # Usage:
 #
 #	. ./test-lib.sh
