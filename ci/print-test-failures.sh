@@ -25,10 +25,13 @@ osx-clang|osx-gcc)
 esac
 
 combined_trash_size=0
+printed=
 for TEST_EXIT in test-results/*.exit
 do
+	test -f "$TEST_EXIT" || continue
 	if [ "$(cat "$TEST_EXIT")" != "0" ]
 	then
+		printed=t
 		TEST_OUT="${TEST_EXIT%exit}out"
 		echo "------------------------------------------------------------------------"
 		echo "$(tput setaf 1)${TEST_OUT}...$(tput sgr0)"
@@ -87,3 +90,14 @@ do
 		fi
 	fi
 done
+
+# prove "No plan found" leaves .exit 0; still dump the TAP logs.
+if test -z "$printed"
+then
+	for TEST_OUT in test-results/*.out
+	do
+		test -f "$TEST_OUT" || continue
+		echo "=== $TEST_OUT ==="
+		cat "$TEST_OUT"
+	done
+fi
